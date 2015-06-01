@@ -82,7 +82,25 @@ class TestProject < Minitest::Test
                simple
             end
 
-            assert @node.prop(:n1).prop(:simple)
+            assert @node.node(:n1).prop(:simple)
+        end
+    end
+    
+    context "pom object" do
+        setup do
+            @pom = ThinWestLake::Maven::Pom.new( "info.thinkmore", "testpkg", "1.0.0" )
+        end
+
+        should "write xml" do
+            puts @pom.to_xml.target!
+        end
+
+        should "can define plugins" do
+            @pom.plugin( "gid:aid" ) do
+                version( 100 )
+            end
+
+            puts @pom.to_xml.target!
         end
     end
 end

@@ -5,10 +5,15 @@ module ThinWestLake
     class Node
         def initialize
             @prop = {}
+            @node = {}
         end
 
         def prop(prop_name)
             @prop[prop_name.to_sym]
+        end
+
+        def node(node_name)
+            @node[node_name.to_sym]
         end
 
         def self.boolean( prop_name )
@@ -39,9 +44,9 @@ module ThinWestLake
             end
 
             define_method prop_sym, ->(*arg, &block2) do 
-                @prop[prop_sym ] = nc.new( *arg )
+                @node[prop_sym ] = nc.new( *arg )
                 if block2
-                    @prop[prop_sym].instance_eval &block2
+                    @node[prop_sym].instance_eval &block2
                 end
             end
         end

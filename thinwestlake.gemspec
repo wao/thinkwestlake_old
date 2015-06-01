@@ -25,4 +25,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "shoulda-context"
 
   spec.add_runtime_dependency "metaid", "~> 1"
+  spec.add_runtime_dependency "builder", "~> 3"
 end
