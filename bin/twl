@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'main'
+require 'thinwestlake'
+
+Main {
+    option 'dryrun', 'd' do
+        required :false
+        cast :boolean
+        description "Dump resut in stdout without actually modify filesystem"
+    end
+
+    def filemgr
+        if params[:dryrun].given?
+            ThinWestLake::DumpFileMgr.new
+        else
+            ThinWestLake::SimpleFileMgr.new
+        end
+    end
+
+    def run
+        if !File.exist? "TWLfile"
+            puts "Can't find TWLfile"
+            exit -1
+        end
+
+        load 'TWLfile'
+
+        ThinWestLake::Project.root.configure
+        ThinWestLake::Project.root.generate( filemgr )
+    end
+
+    mode "generate" do
+        def run
+            if File.exist? "TWLfile" 
+                puts "TWLfile already exist!"
+                exit
+            else
+                File.open "TWLfile", "w" do |wr|
+                    wr << <<__EOF__
+# vim: set ft=ruby
+ThinWestLake.project "gid", "aid", "1.0.0-SNAPSHOT" do
+end
+__EOF__
+                end
+            end
+        end
+    end
+}

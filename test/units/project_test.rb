@@ -6,21 +6,21 @@ class TestProject < Minitest::Test
         setup do
             @gid = "info.thinkmore"
             @aid = "simple"
-            ThinWestLake.project @gid, @aid
+            ThinWestLake::project @gid, @aid
         end
 
         teardown do
-            ThinWestLake.reset
+            ThinWestLake::reset
         end
 
         should "access project with root" do
-            assert_equal @gid.to_sym, ThinWestLake.root.gid
-            assert_equal @aid.to_sym, ThinWestLake.root.aid
+            assert_equal @gid.to_sym, ThinWestLake::root.gid
+            assert_equal @aid.to_sym, ThinWestLake::root.aid
         end
 
         should "raise a exception with second project definition" do
             assert_raises ArgumentError do
-                ThinWestLake.project "a", "b"
+                ThinWestLake::project "a", "b"
             end
         end
     end
@@ -85,22 +85,20 @@ class TestProject < Minitest::Test
             assert @node.node(:n1).prop(:simple)
         end
     end
-    
-    context "pom object" do
-        setup do
-            @pom = ThinWestLake::Maven::Pom.new( "info.thinkmore", "testpkg", "1.0.0" )
+
+    context "a simple with android" do
+        teardown do
+            ThinWestLake::reset
         end
 
-        should "write xml" do
-            puts @pom.to_xml.target!
-        end
-
-        should "can define plugins" do
-            @pom.plugin( "gid:aid" ) do
-                version( 100 )
+        should "export android define" do
+            ThinWestLake::project "android", "android", "1.0" do
+                android
             end
 
-            puts @pom.to_xml.target!
+            ThinWestLake::Project.root.configure
+            ThinWestLake::Project.root.generate(ThinWestLake::DumpFileMgr.new)
         end
     end
+    
 end

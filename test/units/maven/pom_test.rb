@@ -47,16 +47,31 @@ class TestMavenPom < Minitest::Test
 
     context "a article" do
         should "add tag, gid and aid" do
-            at = Artifact.new( :r, :gid, :aid ) do
-                execution
+            at = Artifact.new( :r, :gid, :aid )
+            at.config.execution
+
+            assert_equal :r, at.tag
+            assert_equal :gid, at.gid
+            assert_equal :aid, at.aid
+            assert_equal :execution, at.children[0].tag
+        end
+    end
+
+    context "pom object" do
+        setup do
+            @pom = ThinWestLake::Maven::Pom.new( "info.thinkmore", "testpkg", "1.0.0" )
+        end
+
+        should "write xml" do
+            puts @pom.to_xml.target!
+        end
+
+        should "can define plugins" do
+            @pom.plugin( "gid:aid" ) do
+                version = 100 
             end
 
-            assert_equal :r, at.node.tag
-            assert_equal :gid, at.gid
-            assert_equal :gid, at.node.children[0].text
-            assert_equal :aid, at.aid
-            assert_equal :aid, at.node.children[1].text
-            assert_equal :execution, at.node.children[2].tag
+            puts @pom.to_xml.target!
         end
     end
 end
