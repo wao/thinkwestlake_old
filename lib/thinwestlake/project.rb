@@ -325,6 +325,78 @@ module ThinWestLake
                             version "4.8"
                         end
                     end
+
+                    plugin "org.apache.maven.plugins:maven-compiler-plugin"
+
+                    profile do
+                        config do
+                            id :release
+                            activation do
+                                property do
+                                    name :performRelease
+                                    value true
+                                end
+                            end
+
+                            properties do
+                                __new_node__( "android.release".to_sym, true )
+                                __new_node__( "android.apk.debug".to_sym, false )
+                                __new_node__( "apk.raw".to_sym, "${project.build.directory}/${project.artifactId}-${project.version}.apk" )
+                                __new_node__( "apk.signed.aligned".to_sym, "${project.build.directory}/${project.artifactId}-${project.version}-signed-aligned.apk" )
+                            end
+                        end
+
+                        plugin "org.apache.maven.plugins:maven-jarsigner-plugin" do
+                            version "1.4"
+
+                            config do
+                                executions do
+                                    execution do
+                                        id :sign
+                                        goals do
+                                            goal :sign
+                                            goal :verify
+                                        end
+                                        phase :package
+                                        inherited true
+                                        configuration do
+                                            includes do
+                                                include "${apk.raw}"
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+
+                        plugin "com.simpligility.maven.plugins:android-maven-plugin" do
+                            version "4.1.1"
+
+                            config do
+                                inherited true
+                                configuration do
+                                    sign do
+                                        debug false
+                                    end
+                                    zipalign do
+                                        skip false
+                                        verbose true
+                                        inputApk "${apk.raw}"
+                                        outputApk "${apk.signed.aligned}"
+                                    end
+                                end
+                                executions do
+                                    execution do
+                                        id :alignApk
+                                        phase :package
+                                        goals do
+                                            goal :zipalign
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
                 end
 
                 project.root_pom.module( old_root.aid.to_s, old_root )

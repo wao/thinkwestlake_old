@@ -14,7 +14,7 @@ module ThinWestLake
                     warn_level = $VERBOSE
                     $VERBOSE = nil
                     if instance_methods.include?(name.to_sym) &&
-                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?$)/
+                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|to_s$)/
                         @hidden_methods ||= {}
                         @hidden_methods[name.to_sym] = instance_method(name)
                         undef_method name
@@ -60,14 +60,19 @@ module ThinWestLake
                 @text
             end
 
-            REGEXP_ALPHA_START = /^[A-Za-z0-9]+$/
+            REGEXP_ALPHA_START = /^[A-Za-z0-9.]+$/
 
             def method_missing( method_sym, *args, &blk )
-                (tag, attrs) = args
-                if !method_sym.to_s.match( REGEXP_ALPHA_START )
-                    throw ArgumentError.new( "#{method_sym} is not a valid xml tag" )
+                (text, attrs) = args
+                #byebug
+                __new_node__( method_sym, text, attrs, &blk )
+            end
+
+            def __new_node__(tag, text=nil, attrs=nil,&blk)
+                if !tag.to_s.match( REGEXP_ALPHA_START )
+                    throw ArgumentError.new( "#{tag} is not a valid xml tag" )
                 end
-                child = TreeNode.new(method_sym, tag, attrs)
+                child = TreeNode.new(tag.to_sym, text, attrs)
                 @children << child
                 if blk
                     child.instance_eval &blk
@@ -112,9 +117,7 @@ module ThinWestLake
             end
         end
 
-        class Artifact
-            attr_reader :gid, :aid
-
+        class PomBlock
             def self.attr_rw( *args )
                 args.each do |arg|
                     def_accessor( arg )
@@ -127,13 +130,12 @@ module ThinWestLake
                         if value.nil?
                             @#{attr_name}
                         else
+                            #puts \"#{attr_name}=\#{value}\"
                             @#{attr_name} = value
                             self
                         end
                     end"
             end
-
-            attr_rw :version, :xml_attrs, :tag
 
             def parse_id(mid)
                 tm_assert{ mid.instance_of? String }
@@ -142,13 +144,10 @@ module ThinWestLake
                 ids.map { |id| id.to_sym }
             end
 
+            attr_rw :tag, :xml_attrs
 
-            def initialize( tag, gid, aid, version = nil, xml_attrs = {} )
-                tm_assert{ tag && gid && aid }
+            def initialize( tag, xml_attrs = {} )
                 @tag = tag
-                @gid = gid
-                @aid = aid
-                @version = version
                 @xml_attrs = xml_attrs
                 @configure = TreeNode.new( @tag )
             end
@@ -161,14 +160,40 @@ module ThinWestLake
             end
 
             def to_treenode
-                tm_assert{ @tag && @gid && @aid }
+                tm_assert{ @tag }
                 node = TreeNode.new( @tag, nil, @xml_attrs )
+                node.__add_children__( @configure.__children__ )
+                node
+            end
+        end
+
+        class Artifact < PomBlock
+            attr_reader :gid, :aid
+
+            attr_rw :version, :xml_attrs, :tag
+
+            def initialize( tag, gid, aid, version = nil, xml_attrs = {} )
+                tm_assert{ tag && gid && aid }
+                super( tag, xml_attrs )
+                @gid = gid
+                @aid = aid
+                #puts "version=#{version}"
+                if version == {}
+                    byebug
+                end
+                @version = version
+            end
+
+
+            def to_treenode
+                tm_assert{ @gid && @aid }
+                node = super
                 node.groupId( @gid )
                 node.artifactId( @aid )
+                #puts "version=#{@version}"
                 if @version
                     node.version( @version )
                 end
-                node.__add_children__( @configure.__children__ )
                 node
             end
 
@@ -182,8 +207,8 @@ module ThinWestLake
             attr_rw :scope
             attr_rw :type
 
-            def initialize( gid, aid )
-                super( :dependency, gid, aid )
+            def initialize( gid, aid, version = nil )
+                super( :dependency, gid, aid, version )
             end
 
             def to_treenode
@@ -205,15 +230,15 @@ module ThinWestLake
 
         end
 
-        class Artifacts
+        class Artifacts < PomBlock
             def initialize( tag, cls )
-                @tag = tag
+                super(tag)
                 @cls = cls
                 @artifacts = {}
             end
 
-            def artifact( gid, aid, options={}, &blk )
-                @artifacts[ aid ] = @cls.new( gid, aid, &blk )
+            def artifact( gid, aid, version=nil, options={}, &blk )
+                @artifacts[ aid ] = @cls.new( gid, aid, version,&blk )
                 if blk
                     @artifacts[ aid ].instance_eval &blk
                 end
@@ -224,11 +249,39 @@ module ThinWestLake
             end
 
             def to_treenode
-                artifacts = TreeNode.new( @tag )
+                artifacts = super
                 @artifacts.values.each do |artifact|
                     artifacts.__add_child__( artifact.to_treenode )
                 end
                 artifacts
+            end
+        end
+
+        class PomBlocks < PomBlock
+            def initialize( tag, cls )
+                super(tag)
+                @cls = cls
+                @blocks = []
+            end
+
+            def pom_block( *arg, &blk )
+                block = @cls.new(*arg)
+                @blocks << block
+                if blk
+                    block.instance_eval &blk
+                end
+            end
+
+            def empty?
+                @blocks.empty?
+            end
+
+            def to_treenode
+                root_node = super
+                @blocks.each do |block|
+                    root_node.__add_child__( block.to_treenode )
+                end
+                root_node
             end
         end
 
@@ -241,9 +294,9 @@ module ThinWestLake
         end
 
         module DepenciesBlock
-            def dependency( id, options={}, &blk )
+            def dependency( id, version=nil, options={}, &blk )
                 ids = parse_id(id)
-                @dependencies.dependency( ids[0], ids[1], options, &blk )
+                @dependencies.dependency( ids[0], ids[1], version, options, &blk )
             end
 
             def dependencies_block_init
@@ -253,6 +306,7 @@ module ThinWestLake
 
             def dependencies_block_to_treenode(root_node)
                 root_node.__add_child__( @dependencies.to_treenode ) unless @dependencies.empty? 
+                root_node
             end
         end
 
@@ -304,22 +358,44 @@ module ThinWestLake
                 #TODO same method should return same node
                 root_node.build.__add_child__( @plugins.to_treenode ) unless @plugins.empty?
                 root_node.build.pluginManagement.__add_child__( @plugin_management.to_treenode ) unless @plugin_management.empty?
+                root_node
             end
 
-            def plugin( id, options={}, &blk )
+            def plugin( id, version=nil, options={}, &blk )
                 ids = parse_id(id)
-                @plugins.plugin( ids[0], ids[1], options, &blk )
+                @plugins.plugin( ids[0], ids[1], version, options, &blk )
             end
 
-            def plugin_mgr( id, options={}, &blk )
+            def plugin_mgr( id, options={}, version=nil, &blk )
                 ids = parse_id(id)
-                @plugin_management.plugin( ids[0], ids[1], options, &blk )
+                @plugin_management.plugin( ids[0], ids[1],version, options, &blk )
             end
 
-            def dependency_mgr( id, options={}, &blk )
+            def dependency_mgr( id, version=nil, options={}, &blk )
                 ids = parse_id(id)
-                @dependency_management.dependency( ids[0], ids[1], options, &blk )
+                @dependency_management.dependency( ids[0], ids[1], version, options, &blk )
             end
+        end
+
+        class Profile < PomBlock
+            include BuildBlock
+
+            def initialize
+                super( :profile )
+                build_block_init
+            end
+
+            def to_treenode
+                build_block_to_treenode( super )
+            end
+        end
+
+        class Profiles < PomBlocks
+            def initialize
+                super( :profiles, Profile )
+            end
+
+            alias_method :profile, :pom_block
         end
 
 
@@ -335,6 +411,7 @@ module ThinWestLake
                 tm_assert{ gid && aid && version }
                 super( :project, gid, aid, version, POM_DECL )
                 build_block_init
+                @profiles = Profiles.new
 
                 if blk
                     instance_eval &blk
@@ -345,6 +422,9 @@ module ThinWestLake
                 @modules[ path ] = pom
             end
 
+            def profile( &blk )
+                @profiles.profile( &blk )
+            end
 
 
             def root
@@ -371,6 +451,7 @@ module ThinWestLake
                 end
 
                 build_block_to_treenode(root_node)
+                root_node.__add_child__( @profiles.to_treenode ) if !@profiles.empty?
 
                 root_node
             end
