@@ -5,7 +5,42 @@ require 'builder'
 
 module ThinWestLake
     module Maven
-        class TreeNode
+        class BlankSlate
+            class << self
+
+                # Hide the method named +name+ in the BlankSlate class.  Don't
+                # hide +instance_eval+ or any method beginning with "__".
+                def hide(name)
+                    warn_level = $VERBOSE
+                    $VERBOSE = nil
+                    if instance_methods.include?(name.to_sym) &&
+                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?$)/
+                        @hidden_methods ||= {}
+                        @hidden_methods[name.to_sym] = instance_method(name)
+                        undef_method name
+                    end
+                ensure
+                    $VERBOSE = warn_level
+                end
+
+                def find_hidden_method(name)
+                    @hidden_methods ||= {}
+                    @hidden_methods[name] || superclass.find_hidden_method(name)
+                end
+
+                # Redefine a previously hidden method so that it may be called on a blank
+                # slate object.
+                def reveal(name)
+                    hidden_method = find_hidden_method(name)
+                    fail "Don't know how to reveal method '#{name}'" unless hidden_method
+                    define_method(name, hidden_method)
+                end
+            end
+
+            instance_methods.each { |m| hide(m.to_s) }
+        end
+
+        class TreeNode < BlankSlate
             def initialize(tag, text = nil, attrs={})
                 @tag = tag.to_sym
                 @attrs = attrs
@@ -245,7 +280,6 @@ module ThinWestLake
 
             alias_method :plugin, :artifact
         end
-
 
 
         class Pom < ArtifactWithDependencies
