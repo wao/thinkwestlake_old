@@ -11,13 +11,13 @@ class TestMavenPom < Minitest::Test
         end
 
         should "has tag root" do
-            assert_equal :root, @root.tag
+            assert_equal :root, @root.__tag__
         end
 
         should "create a child with method" do
             c = @root.xml
-            assert_same c, @root.children[0]
-            assert_equal :xml, c.tag
+            assert_same c, @root.__children__[0]
+            assert_equal :xml, c.__tag__
         end
 
 
@@ -26,7 +26,7 @@ class TestMavenPom < Minitest::Test
                 fake
             }
 
-            assert_equal :fake, @root.children[0].children[0].tag
+            assert_equal :fake, @root.__children__[0].__children__[0].__tag__
         end
     end
 
@@ -36,12 +36,12 @@ class TestMavenPom < Minitest::Test
         end
 
         should "has a attribute name is :class, value is kk" do
-            assert_equal "kk", @root.attrs[:class]
+            assert_equal "kk", @root.__attrs__[:class]
         end
 
         should "be able to create a children with attrs" do
             @root.xml( nil, :cfg=>"none" )
-            assert_equal "none", @root.children[0].attrs[:cfg]
+            assert_equal "none", @root.__children__[0].__attrs__[:cfg]
         end
     end
 
@@ -53,7 +53,7 @@ class TestMavenPom < Minitest::Test
             assert_equal :r, at.tag
             assert_equal :gid, at.gid
             assert_equal :aid, at.aid
-            assert_equal :execution, at.children[0].tag
+            assert_equal :execution, at.config.__children__[0].__tag__
         end
     end
 

@@ -197,14 +197,16 @@ module ThinWestLake
 
                     plugin_mgr "com.simpligility.maven.plugins:android-maven-plugin" do
                         version "4.1.1"
-                        extensions "true"
-                        configuration do
-                            sdk do
-                                platform "21"
-                            end
+                        config do
+                            extensions "true"
+                            configuration do
+                                sdk do
+                                    platform "21"
+                                end
 
-                            resourceDirectory "res"
-                            androidManifestFile "AndroidManifest.xml"
+                                resourceDirectory "res"
+                                androidManifestFile "AndroidManifest.xml"
+                            end
                         end
                     end
 
@@ -283,12 +285,12 @@ module ThinWestLake
 
                     plugin "com.simpligility.maven.plugins:android-maven-plugin" 
                     #do
-                        #configuration do
-                            ##TODO fix it
-                            ##test do
-                                ##createReport true
-                            ##end
-                        #end
+                    #configuration do
+                    ##TODO fix it
+                    ##test do
+                    ##createReport true
+                    ##end
+                    #end
                     #end
                 end
 
@@ -318,12 +320,9 @@ module ThinWestLake
                                 end
                             end
                         end
-                        dependencies do
-                            dependency do
-                                groupId "net.sf.proguard"
-                                artifactId "proguard-base"
-                                version "4.8"
-                            end
+
+                        dependency "net.sf.proguard:proguard-base" do
+                            version "4.8"
                         end
                     end
                 end
