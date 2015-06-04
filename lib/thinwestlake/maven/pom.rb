@@ -240,27 +240,27 @@ module ThinWestLake
             alias_method :dependency, :artifact
         end
 
-        class ArtifactWithDependencies < Artifact
-            def initialize( tag, gid, aid, version = nil, xml_attrs = {} )
-                super(tag,gid,aid,version,xml_attrs)
-                @dependencies = Dependencies.new
-            end
-
+        module DepenciesBlock
             def dependency( id, options={}, &blk )
                 ids = parse_id(id)
                 @dependencies.dependency( ids[0], ids[1], options, &blk )
             end
 
-            def to_treenode
-                root_node = super
+            def dependencies_block_init
+                @dependencies = Dependencies.new
+            end
+
+
+            def dependencies_block_to_treenode(root_node)
                 root_node.__add_child__( @dependencies.to_treenode ) unless @dependencies.empty? 
-                root_node
             end
         end
 
-        class Plugin < ArtifactWithDependencies
+        class Plugin < Artifact
+            include DepenciesBlock
             def initialize( gid, aid, version =nil )
                 super( :plugin, gid, aid, version )
+                dependencies_block_init
             end
 
             def configuration(&blk)
@@ -269,6 +269,12 @@ module ThinWestLake
                         instance_eval &blk
                     end
                 end
+            end
+
+            def to_treenode
+                root_node = super
+                dependencies_block_to_treenode(root_node)
+                root_node
             end
         end
 
@@ -281,35 +287,29 @@ module ThinWestLake
             alias_method :plugin, :artifact
         end
 
+        module BuildBlock
+            include DepenciesBlock
 
-        class Pom < ArtifactWithDependencies
-            POM_DECL = { 'xmlns'=>"http://maven.apache.org/POM/4.0.0",'xmlns:xsi'=>"http://www.w3.org/2001/XMLSchema-instance",'xsi:schemaLocation'=>"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd" }
-
-            attr_rw :packaging, :parent, :name
-            attr_reader :modules
-
-            def initialize( gid, aid, version, &blk )
-                tm_assert{ gid && aid && version }
-                super( :project, gid, aid, version, POM_DECL )
+            def build_block_init
+                dependencies_block_init
                 @plugins = Plugins.new
                 @plugin_management = Plugins.new
                 @dependency_management = Dependencies.new
                 @modules = {}
-
-                if blk
-                    instance_eval &blk
-                end
             end
 
-            def module( path, pom )
-                @modules[ path ] = pom
+            def build_block_to_treenode(root_node)
+                dependencies_block_to_treenode(root_node)
+                root_node.dependencyManagement.__add_child__( @dependency_management.to_treenode ) unless @dependency_management.empty?
+                #TODO same method should return same node
+                root_node.build.__add_child__( @plugins.to_treenode ) unless @plugins.empty?
+                root_node.build.pluginManagement.__add_child__( @plugin_management.to_treenode ) unless @plugin_management.empty?
             end
 
             def plugin( id, options={}, &blk )
                 ids = parse_id(id)
                 @plugins.plugin( ids[0], ids[1], options, &blk )
             end
-
 
             def plugin_mgr( id, options={}, &blk )
                 ids = parse_id(id)
@@ -320,6 +320,31 @@ module ThinWestLake
                 ids = parse_id(id)
                 @dependency_management.dependency( ids[0], ids[1], options, &blk )
             end
+        end
+
+
+        class Pom < Artifact
+            include BuildBlock
+
+            POM_DECL = { 'xmlns'=>"http://maven.apache.org/POM/4.0.0",'xmlns:xsi'=>"http://www.w3.org/2001/XMLSchema-instance",'xsi:schemaLocation'=>"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd" }
+
+            attr_rw :packaging, :parent, :name
+            attr_reader :modules
+
+            def initialize( gid, aid, version, &blk )
+                tm_assert{ gid && aid && version }
+                super( :project, gid, aid, version, POM_DECL )
+                build_block_init
+
+                if blk
+                    instance_eval &blk
+                end
+            end
+
+            def module( path, pom )
+                @modules[ path ] = pom
+            end
+
 
 
             def root
@@ -345,10 +370,8 @@ module ThinWestLake
                     end
                 end
 
-                root_node.dependencyManagement.__add_child__( @dependency_management.to_treenode ) unless @dependency_management.empty?
-                #TODO same method should return same node
-                root_node.build.__add_child__( @plugins.to_treenode ) unless @plugins.empty?
-                root_node.build.pluginManagement.__add_child__( @plugin_management.to_treenode ) unless @plugin_management.empty?
+                build_block_to_treenode(root_node)
+
                 root_node
             end
 
