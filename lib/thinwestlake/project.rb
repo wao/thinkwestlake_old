@@ -2,12 +2,16 @@ require 'metaid'
 require 'byebug'
 require 'simple_assert'
 require 'thinwestlake/maven/pom'
+require 'thinwestlake/helper'
 
 module ThinWestLake
     class Node
+        include AttrRw
+
         def initialize
             @prop = {}
             @node = {}
+            @pom = {}
         end
 
         def prop(prop_name)
@@ -52,6 +56,21 @@ module ThinWestLake
                 end
             end
         end
+
+        def configure(project=nil)
+            @pom.each_pair do |pom_name, blk|
+                tm_assert{ blk }
+
+                target_pom = project.pom(pom_name)
+                raise "Unknown pom #{pom_name}" if target_pom.nil?
+
+                target_pom.instance_eval &blk
+            end
+        end
+
+        def pom(name, &blk)
+            @pom[name.to_sym] = blk
+        end
     end
 
     class SimpleFileMgr
@@ -78,8 +97,24 @@ module ThinWestLake
     end
 
     class Project < Node
-        attr_accessor :gid, :aid, :version
-        attr_accessor :default_pom, :root_pom
+        attr_rw :gid, :aid, :version, :java_package
+
+        def pom( name = nil, value = nil )
+            if name.nil?
+                name = :default
+            else
+                name = name.to_sym
+            end
+
+
+            if value.nil?
+                @pom[name]
+            else
+                tm_assert{ value.is_a? Maven::Pom }
+                @pom[name] = value
+                self
+            end
+        end
 
         def initialize(gid, aid, version)
             tm_assert{ gid && aid }
@@ -87,16 +122,18 @@ module ThinWestLake
             @gid = gid.to_sym
             @aid = aid.to_sym
             @version = version
+            @pom = {}
         end
 
         meta_eval do
             attr_accessor :root
         end
 
-        def configure
+        def configure( root_prj = nil )
+            tm_assert{ root_prj.nil? }
             tm_assert{ @version }
-            @root_pom = Maven::Pom.new( @gid, @aid, @version )
-            @default_pom = @root_pom
+            pom( :root, Maven::Pom.new( @gid, @aid, @version ) )
+            pom( :default,  pom(:root) )
 
             @node.each_value do |v|
                 v.configure( self )
@@ -118,8 +155,8 @@ module ThinWestLake
 
         def generate(file_mgr=nil)
             file_mgr ||= SimpleFileMgr.new
-            create_pom( file_mgr, root_pom )
-            root_pom.modules.each_pair do |p,v|
+            create_pom( file_mgr, pom(:root) )
+            pom(:root).mymodules.each_pair do |p,v|
                 create_pom( file_mgr, v, p )
             end
         end
@@ -144,264 +181,7 @@ module ThinWestLake
         Project.root = nil
     end
 
-    class Project
-        node :android do
-            def configure( project )
-                root = Maven::Pom.new( project.root_pom.gid, (project.root_pom.aid.to_s + "-parent").to_sym, project.version ) do
-                    packaging "pom"
-
-                    name "#{project.root_pom.aid.to_s} - Parent"
-
-                    dependency "org.projectlombok:lombok" do
-                        version "1.16.4"
-                        scope "provided"
-                    end
-
-                    dependency_mgr "android:android" do
-                        version "5.0.1_r2"
-                        scope "provided"
-                    end
-
-                    dependency_mgr "com.google.code.findbugs:jsr305" do
-                        version "3.0.0"
-                        scope :provided
-                    end
-
-                    dependency_mgr "org.androidannotations:androidannotations" do
-                        version "3.2"
-                        scope "provided"
-                    end
-
-
-                    dependency_mgr "org.androidannotations:androidannotations-api" do
-                        version "3.2"
-                    end
-
-                    dependency_mgr "com.google.android:support-v4" do
-                        version "r7"
-                    end
-
-                    dependency_mgr "org.robolectric:robolectric" do
-                        version "2.4"
-                        scope "test"
-                    end
-
-                    dependency_mgr "junit:junit" do
-                        version "4.11"
-                        scope "provided"
-                    end
-
-                    dependency_mgr "com.google.guava:guava" do
-                        version "18.0"
-                    end
-
-                    plugin_mgr "com.simpligility.maven.plugins:android-maven-plugin" do
-                        version "4.1.1"
-                        config do
-                            extensions "true"
-                            configuration do
-                                sdk do
-                                    platform "21"
-                                end
-
-                                resourceDirectory "res"
-                                androidManifestFile "AndroidManifest.xml"
-                            end
-                        end
-                    end
-
-                    plugin_mgr "org.apache.maven.plugins:maven-compiler-plugin" do
-                        version "3.3"
-                        configuration do
-                            source "1.7"
-                            target "1.7"
-                            useIncrementalCompilation "false"
-                        end
-                    end
-
-                    dependency_mgr "info.thinkmore.android:cofoja-api" do
-                        version "1.2-SNAPSHOT"
-                    end
-
-                    dependency_mgr "info.thinkmore.android:cofoja" do
-                        version "1.2-SNAPSHOT"
-                        scope :provided
-                    end
-
-                    plugin_mgr "org.eclipse.m2e:lifecycle-mapping" do
-                        version "1.0.0"
-                        configuration do
-                            lifecycleMappingMetadata do
-                                pluginExecutions do
-                                    pluginExecution do
-                                        pluginExecutionFilter do
-                                            groupId "com.simpligility.maven.plugins"
-                                            artifactId "android-maven-plugin"
-                                            versionRange "[3.8.2,)"
-                                            goals do
-                                                goal "consume-aar"
-                                                goal "emma"
-                                            end
-                                        end
-                                        action do
-                                            ignore
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-
-                old_root = project.root_pom
-                project.root_pom = root
-
-                test_prj = Maven::Pom.new( old_root.gid, "#{old_root.aid}-it", old_root.version ) do
-                    parent project.root_pom
-                    packaging :apk
-                    name "#{aid} - Integration tests"
-
-                    dependency "com.google.android:android-test" do
-                        version "4.1.1.4"
-                        scope :provided
-                    end
-
-                    dependency "com.jayway.android.robotium:robotium-solo" do
-                        version "5.0.1"
-                    end
-
-                    #My using pom directory
-                    dependency "#{old_root.gid}:#{old_root.aid}" do
-                        version old_root.version
-                        type :apk
-                        scope  :provided
-                    end
-
-                    dependency "#{old_root.gid}:#{old_root.aid}" do
-                        version old_root.version
-                        type :jar
-                        scope  :provided
-                    end
-
-                    plugin "com.simpligility.maven.plugins:android-maven-plugin" 
-                    #do
-                    #configuration do
-                    ##TODO fix it
-                    ##test do
-                    ##createReport true
-                    ##end
-                    #end
-                    #end
-                end
-
-                old_root.instance_exec do
-                    parent project.root_pom
-
-                    packaging :apk
-                    name "#{aid}"
-
-                    dependency "info.thinkmore.android:cofoja-api"
-                    dependency "info.thinkmore.android:cofoja"
-                    dependency "com.google.guava:guava"
-                    dependency "android:android"
-                    dependency "org.androidannotations:androidannotations"
-                    dependency "com.google.android:support-v4" 
-                    dependency "org.robolectric:robolectric"
-                    dependency "junit:junit"
-                    dependency "com.google.code.findbugs:jsr305"
-
-                    plugin "com.simpligility.maven.plugins:android-maven-plugin" do
-                        configuration do
-                            proguard do
-                                skip false
-                                jvmArguments do
-                                    jvmArgument "-Xms256m"
-                                    jvmArgument "-Xmx512m"
-                                end
-                            end
-                        end
-
-                        dependency "net.sf.proguard:proguard-base" do
-                            version "4.8"
-                        end
-                    end
-
-                    plugin "org.apache.maven.plugins:maven-compiler-plugin"
-
-                    profile do
-                        config do
-                            id :release
-                            activation do
-                                property do
-                                    name :performRelease
-                                    value true
-                                end
-                            end
-
-                            properties do
-                                __new_node__( "android.release".to_sym, true )
-                                __new_node__( "android.apk.debug".to_sym, false )
-                                __new_node__( "apk.raw".to_sym, "${project.build.directory}/${project.artifactId}-${project.version}.apk" )
-                                __new_node__( "apk.signed.aligned".to_sym, "${project.build.directory}/${project.artifactId}-${project.version}-signed-aligned.apk" )
-                            end
-                        end
-
-                        plugin "org.apache.maven.plugins:maven-jarsigner-plugin" do
-                            version "1.4"
-
-                            config do
-                                executions do
-                                    execution do
-                                        id :sign
-                                        goals do
-                                            goal :sign
-                                            goal :verify
-                                        end
-                                        phase :package
-                                        inherited true
-                                        configuration do
-                                            includes do
-                                                include "${apk.raw}"
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-
-                        plugin "com.simpligility.maven.plugins:android-maven-plugin" do
-                            version "4.1.1"
-
-                            config do
-                                inherited true
-                                configuration do
-                                    sign do
-                                        debug false
-                                    end
-                                    zipalign do
-                                        skip false
-                                        verbose true
-                                        inputApk "${apk.raw}"
-                                        outputApk "${apk.signed.aligned}"
-                                    end
-                                end
-                                executions do
-                                    execution do
-                                        id :alignApk
-                                        phase :package
-                                        goals do
-                                            goal :zipalign
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-
-                project.root_pom.module( old_root.aid.to_s, old_root )
-                project.root_pom.module( test_prj.aid.to_s, test_prj )
-            end
-        end
+    def self.extension( &blk )
+        Project.class_eval &blk
     end
 end

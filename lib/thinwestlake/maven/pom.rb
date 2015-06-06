@@ -2,6 +2,7 @@ require 'simple_assert'
 require 'byebug'
 require 'rexml/document'
 require 'builder'
+require 'thinwestlake/helper'
 
 module ThinWestLake
     module Maven
@@ -14,7 +15,7 @@ module ThinWestLake
                     warn_level = $VERBOSE
                     $VERBOSE = nil
                     if instance_methods.include?(name.to_sym) &&
-                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|to_s$)/
+                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|class|to_s$)/
                         @hidden_methods ||= {}
                         @hidden_methods[name.to_sym] = instance_method(name)
                         undef_method name
@@ -41,6 +42,24 @@ module ThinWestLake
         end
 
         class TreeNode < BlankSlate
+            @name_map = {}
+
+            def self.map_name( method_name, tag_name )
+                @name_map[method_name.to_sym ] = tag_name.to_sym
+            end
+
+            def self.lookup_name( method_name )
+                ret =  @name_map[ method_name.to_sym ]
+                if ret.nil?
+                    method_name.to_sym
+                else
+                    ret
+                end
+            end
+
+
+            map_name( :mymodule, "module" )
+
             def initialize(tag, text = nil, attrs={})
                 @tag = tag.to_sym
                 @attrs = attrs
@@ -72,7 +91,7 @@ module ThinWestLake
                 if !tag.to_s.match( REGEXP_ALPHA_START )
                     throw ArgumentError.new( "#{tag} is not a valid xml tag" )
                 end
-                child = TreeNode.new(tag.to_sym, text, attrs)
+                child = TreeNode.new( self.class.lookup_name(tag), text, attrs)
                 @children << child
                 if blk
                     child.instance_eval &blk
@@ -118,24 +137,7 @@ module ThinWestLake
         end
 
         class PomBlock
-            def self.attr_rw( *args )
-                args.each do |arg|
-                    def_accessor( arg )
-                end
-            end
-
-            def self.def_accessor( attr_name )
-                self.class_eval "
-                    def #{attr_name}(value=nil) 
-                        if value.nil?
-                            @#{attr_name}
-                        else
-                            #puts \"#{attr_name}=\#{value}\"
-                            @#{attr_name} = value
-                            self
-                        end
-                    end"
-            end
+            include AttrRw
 
             def parse_id(mid)
                 tm_assert{ mid.instance_of? String }
@@ -405,7 +407,6 @@ module ThinWestLake
             POM_DECL = { 'xmlns'=>"http://maven.apache.org/POM/4.0.0",'xmlns:xsi'=>"http://www.w3.org/2001/XMLSchema-instance",'xsi:schemaLocation'=>"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd" }
 
             attr_rw :packaging, :parent, :name
-            attr_reader :modules
 
             def initialize( gid, aid, version, &blk )
                 tm_assert{ gid && aid && version }
@@ -418,8 +419,12 @@ module ThinWestLake
                 end
             end
 
-            def module( path, pom )
+            def mymodule( path, pom )
                 @modules[ path ] = pom
+            end
+
+            def mymodules
+                @modules
             end
 
             def profile( &blk )

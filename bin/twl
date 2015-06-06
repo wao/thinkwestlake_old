@@ -19,19 +19,87 @@ Main {
         end
     end
 
-    def run
+    def load_twlfile
         if !File.exist? "TWLfile"
             puts "Can't find TWLfile"
             exit -1
         end
 
         load 'TWLfile'
+    end
+
+    def run
+        load_twlfile
 
         ThinWestLake::Project.root.configure
         ThinWestLake::Project.root.generate( filemgr )
     end
 
     mode "generate" do
+        mode "java" do
+            argument :class_name do
+                required
+                cast :string
+            end
+
+            def ensure_file_not_exist( path )
+                if path.exist?
+                    puts "#{path} already exist!"
+                    exit
+                end
+            end
+
+            def run
+                class_name = params[:class_name].value
+                if class_name.chr[0] == "." 
+                    load_twlfile
+                    if ThinWestLake::Project.root.java_package.nil?
+                        puts "Not specify package name in TWLfile"
+                        exit
+                    end
+
+                    class_name = ThinWestLake::Project.root.java_package + class_name
+                end
+
+                package_names = class_name.split( "." )
+                base_name = package_names.pop
+                package_path = package_names.join( "/" )
+
+                package_name = package_names.join(".")
+                java_file = Pathname.new( "src/main/java/" + package_path + "/" + base_name + ".java" )
+                java_test_file = Pathname.new( "src/test/java/" + package_path + "/" + base_name + "Test.java" )
+
+                ensure_file_not_exist( java_file )
+                ensure_file_not_exist( java_test_file )
+
+                java_file.dirname.mkpath
+
+                java_file.open( "w" ) do |wr|
+                   wr << "package #{package_name};
+    
+class #{base_name} {
+};"
+                end
+
+                java_test_file.dirname.mkpath
+
+                java_test_file.open( "w" ) do |wr|
+                   wr << "package #{package_name};
+    
+import static org.junit.Assert.assertEquals;
+import org.unit.Test;
+
+class #{base_name}Test {
+    @Test
+    public void a_simple_test_method(){
+    }
+};"
+
+                end
+            end
+        end
+
+
         def run
             if File.exist? "TWLfile" 
                 puts "TWLfile already exist!"
