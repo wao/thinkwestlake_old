@@ -57,12 +57,16 @@ Main {
                         puts "Not specify package name in TWLfile"
                         exit
                     end
-
+                    
                     class_name = ThinWestLake::Project.root.java_package + class_name
                 end
 
                 package_names = class_name.split( "." )
                 base_name = package_names.pop
+                if package_names.empty?
+                    puts "Should define package name."
+                    exit
+                end
                 package_path = package_names.join( "/" )
 
                 package_name = package_names.join(".")
@@ -77,7 +81,7 @@ Main {
                 java_file.open( "w" ) do |wr|
                    wr << "package #{package_name};
     
-class #{base_name} {
+public class #{base_name} {
 };"
                 end
 
@@ -86,14 +90,14 @@ class #{base_name} {
                 java_test_file.open( "w" ) do |wr|
                    wr << "package #{package_name};
     
-import static org.junit.Assert.assertEquals;
-import org.unit.Test;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-class #{base_name}Test {
+public class #{base_name}Test {
     @Test
     public void a_simple_test_method(){
     }
-};"
+}"
 
                 end
             end
