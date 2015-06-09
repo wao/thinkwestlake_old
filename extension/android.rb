@@ -92,7 +92,7 @@ ThinWestLake.extension do
                                         groupId "com.simpligility.maven.plugins"
                                         artifactId "android-maven-plugin"
                                         versionRange "[3.8.2,)"
-                                        goals do
+                                        goal.as_list do
                                             goal "consume-aar"
                                             goal "emma"
                                         end
@@ -168,7 +168,7 @@ ThinWestLake.extension do
                     configuration do
                         proguard do
                             skip false
-                            jvmArguments do
+                            jvmArgument.as_list do
                                 jvmArgument "-Xms256m"
                                 jvmArgument "-Xmx512m"
                             end
@@ -207,7 +207,7 @@ ThinWestLake.extension do
                             executions do
                                 execution do
                                     id :sign
-                                    goals do
+                                    goal.as_list do
                                         goal :sign
                                         goal :verify
                                     end

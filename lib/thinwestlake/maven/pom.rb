@@ -322,7 +322,7 @@ module ThinWestLake
                 if !@modules.empty?
                     modules = root_node.modules
                     @modules.keys.each do |mod|
-                        modules.module( mod )
+                        modules.mymodule( mod )
                     end
                 end
 

@@ -142,19 +142,41 @@ module ThinWestLake
                 end
             end
 
-            REGEXP_ALPHA_START = /^[a-z][A-Za-z0-9.]+$/
+            REGEXP_ALPHA_START = /^[a-z][A-Za-z0-9.]*$/
 
-            def [](selector={},&blk)
+            def __change_to_list__
+                @state = :list
+                @subtag = @tag
+                @tag = (@tag.to_s + "s").to_sym
+
+                __meta_id__.class_eval "
+                        def #{@subtag}(text=nil, attrs=nil,&blk)
+                            ret = TreeNode.new( :#{@subtag}, text, attrs )
+                            @children << ret
+                            if blk
+                               ret.instance_eval &blk
+                            end
+                            ret
+                        end"
+            end
+
+            def as_list(selector=nil,&blk)
                 case @state
                 when :unknown
-                    @state = :list
-                    @subtag = @tag
-                    @tag = (@tag.to_s + "s").to_sym
+                    __change_to_list__
                 when :node
                     raise "Node #{@tag} already act as node, can't be treated as list"
                 end
 
-                __item__( selector, &blk ) 
+                if selector.nil?
+                    if blk
+                        instance_eval &blk
+                    end
+
+                    self
+                else
+                    __item__( selector, &blk ) 
+                end
             end
 
             def method_missing( method_sym, *args, &blk )
@@ -164,11 +186,11 @@ module ThinWestLake
                 else
                     (text, attrs) = args
                     #byebug
-                    __new_node__( method_sym, text, attrs, &blk )
+                    __new_node__( method_sym, text, attrs, true, &blk )
                 end
             end
 
-            def __new_node__(tag, text=nil, attrs=nil,&blk)
+            def __new_node__(tag, text=nil, attrs=nil, reader=false, &blk)
                 if @state == :unknown
                     @state = :node
                 end
@@ -180,7 +202,8 @@ module ThinWestLake
                 end
                 child = TreeNode.new( tag, text, attrs)
 
-                instance_variable_set( ("@" + tag.to_s).to_sym, child )
+                if reader
+                    instance_variable_set( ("@" + tag.to_s).to_sym, child )
 
                 __meta_id__.class_eval "
                         def #{child.__tag__}(&blk)
@@ -190,6 +213,7 @@ module ThinWestLake
                             end
                             ret
                         end"
+                end
 
                 @children << child
 

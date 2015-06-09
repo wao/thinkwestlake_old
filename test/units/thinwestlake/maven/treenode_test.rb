@@ -38,13 +38,13 @@ class TestProject < Minitest::Test
         end
 
         should "change to list if operation [] is used" do
-            a = @root.plugin[:id=>"run"]
+            a = @root.plugin.as_list(:id=>"run")
             assert_equal :plugins, @root.__children__[0].__tag__, "tag will become plurs"
             assert_same a, @root.__children__[0].__children__[0], "a sub item will be create if is not exist"
             assert_equal :plugin, a.__tag__
             assert_equal :id, a.id.__tag__
             assert_equal "run", a.id.__text__
-            assert_same  a, @root.plugin[:id=>"run"]
+            assert_same  a, @root.plugin.as_list( :id=>"run" )
         end
     end
 
@@ -56,7 +56,7 @@ class TestProject < Minitest::Test
 
         should "not change to list" do
             assert_raises RuntimeError do
-                @root.plugin[ :id=>"a" ]
+                @root.plugin.as_list( :id=>"a" )
             end
         end
     end
@@ -64,7 +64,7 @@ class TestProject < Minitest::Test
     context "a treenode which is created as array " do
         setup do
             @root = TreeNode.new(:root)
-            @root.plugin[ :id=>"a" ]
+            @root.plugin.as_list
         end
 
         should " not has __text__" do
@@ -73,6 +73,25 @@ class TestProject < Minitest::Test
                     __text__ "good"
                 end
             end
+        end
+    end
+
+    context "a treenode which is created as array " do
+        setup do
+            @root = TreeNode.new(:root)
+        end
+
+        should " define operator [] to return self" do
+            @root.plugin.as_list( :v=>"c" )
+            assert_same @root.plugin.as_list, @root.__children__[0]
+        end
+
+        should " have method to add new children" do
+            @root.plugin.as_list { 
+                plugin "abc"
+            }
+
+            assert_equal "abc", @root.plugin.as_list.__children__[0].__text__
         end
     end
 end
