@@ -15,7 +15,7 @@ class TestMavenPom < Minitest::Test
             assert_equal :start, @pomblock.tag
         end
 
-        should "allow config" do
+        should "support config" do
             @pomblock.config do
                 sub "a"
             end
@@ -23,7 +23,7 @@ class TestMavenPom < Minitest::Test
             assert_equal "a", @pomblock.configure.sub.__text__
         end
 
-        should "can translate to node which config works as children" do
+        should "support translating to node which config works as children" do
             @pomblock.config do
                 sub "a"
             end
@@ -64,7 +64,7 @@ class TestMavenPom < Minitest::Test
         end
     end
 
-    context "a pom simple object" do
+    context "a pom" do
         setup do
             @pom = Pom.new( "info.thinkmore", "testpkg", "1.0.0" )
         end
@@ -78,7 +78,7 @@ class TestMavenPom < Minitest::Test
             assert_equal "4.0.0", doc.text( "/project/modelVersion" )
         end
 
-        should "can define plugins" do
+        should "support plugins" do
             @pom.plugin( "gid:aid" ) do
                 version( 100 )
             end
@@ -100,7 +100,7 @@ class TestMavenPom < Minitest::Test
             end
         end
 
-        should "can define plugin management" do
+        should " support plugin management" do
             @pom.plugin_mgr( "gid:aid" ) do
                 version( 100 )
             end
@@ -123,7 +123,7 @@ class TestMavenPom < Minitest::Test
         end
 
 
-        should " can define dependency" do
+        should " support dependency" do
             @pom.dependency( "depg1:depa1" ) do
                 version( "2.0" )
             end
@@ -135,7 +135,7 @@ class TestMavenPom < Minitest::Test
             assert_equal "2.0", doc.text( "/project/dependencies/dependency/version" )
         end
 
-        should " can define dependency management" do
+        should " support dependency management" do
             @pom.dependency_mgr( "depg1:depa1" ) do
                 version( "2.0" )
             end
@@ -145,6 +145,31 @@ class TestMavenPom < Minitest::Test
             assert_equal "depg1", doc.text( "/project/dependencyManagement/dependencies/dependency/groupId" )
             assert_equal "depa1", doc.text( "/project/dependencyManagement/dependencies/dependency/artifactId" )
             assert_equal "2.0", doc.text( "/project/dependencyManagement/dependencies/dependency/version" )
+        end
+
+        should " support modules" do
+            fpom = Pom.new( :b, :c, "1.0" )
+
+            @pom.mymodule( "abc", fpom )
+
+            doc = XmlDoc.new(@pom)
+
+            assert_equal "abc", doc.text( "/project/modules/module" )
+        end
+
+        should " support packaing" do
+            @pom.packaging( :jar )
+            doc = XmlDoc.new(@pom)
+            assert_equal "jar", doc.text( "/project/packaging" )
+        end
+
+        should " support profile" do
+            @pom.profile do
+                plugin "a:b"
+            end
+            doc = XmlDoc.new(@pom)
+            assert_equal "a", doc.text( "/project/profiles/profile/build/plugins/plugin/groupId" )
+            assert_equal "b", doc.text( "/project/profiles/profile/build/plugins/plugin/artifactId" )
         end
     end
 end

@@ -243,7 +243,7 @@ module ThinWestLake
             end
 
             def method_missing( method_sym, *args, &blk )
-                puts method_sym
+                #puts method_sym
                 if __list?
                     super
                 else
