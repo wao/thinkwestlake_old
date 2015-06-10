@@ -15,7 +15,7 @@ class TestProject < Minitest::Test
         end
 
         should "can create a child with method" do
-            assert !@root.__methods__.include?(:xml)
+            assert !(@root.__methods__.include?(:xml))
             c = @root.xml
             assert_same c, @root.xml
             assert_same c, @root.__children__[0]
@@ -45,6 +45,62 @@ class TestProject < Minitest::Test
             assert_equal :id, a.id.__tag__
             assert_equal "run", a.id.__text__
             assert_same  a, @root.plugin.as_list( :id=>"run" )
+        end
+    end
+
+    context "a treenode" do
+        setup do
+            @node = TreeNode.new( :t ).__apply__ do
+                sub "x"
+            end
+        end
+
+        should "equal to node create as same" do
+            assert_equal @node, TreeNode.new( :t).__apply__(){ sub "x" }
+        end
+
+        should "not equal with different tag" do
+            assert !(@node==TreeNode.new( :x).__apply__(){ sub "x" })
+        end
+
+        should "not equal different childen" do
+            assert !(@node==TreeNode.new( :t) )
+            node = TreeNode.new( :t).__apply__() do
+                sub "y"
+            end
+
+            assert @node != node
+
+            assert !(@node==TreeNode.new( :t).__apply__() do
+                sub
+            end)
+            assert !(@node==TreeNode.new( :t).__apply__() do
+                sub2 "x"
+            end)
+        end
+    end
+
+    context "a TreeNode with attributes" do
+        setup do
+            @root = TreeNode.new(:root, nil, :class=>"kk")
+        end
+
+        should "has a attribute name is :class, value is kk" do
+            assert_equal "kk", @root.__attrs__[:class]
+        end
+
+        should "be able to create a children with attrs" do
+            @root.xml( nil, :cfg=>"none" )
+            assert_equal "none", @root.__children__[0].__attrs__[:cfg]
+        end
+    end
+
+    context "a treenode" do
+        should "change to array after call as_list" do
+            root = TreeNode.new(:root)
+            root.as_list
+            assert_equal :roots, root.__tag__
+            assert_respond_to root, :root
         end
     end
 

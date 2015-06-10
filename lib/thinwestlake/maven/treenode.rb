@@ -12,7 +12,7 @@ module ThinWestLake
                     warn_level = $VERBOSE
                     $VERBOSE = nil
                     if instance_methods.include?(name.to_sym) &&
-                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|class|inspect|instance_variable_set|object_id|instance_variable_get|to_s|method$)/
+                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|class|inspect|instance_variable_set|object_id|instance_variable_get|to_s|method|instance_of\?|respond_to\?|to_ary$)/
                         @hidden_methods ||= {}
                         @hidden_methods[name.to_sym] = instance_method(name)
                         undef_method name
@@ -93,7 +93,6 @@ module ThinWestLake
                 end
             end
 
-
             map_name( :mymodule, "module" )
 
             def initialize(tag, text = nil, attrs={})
@@ -104,6 +103,26 @@ module ThinWestLake
                 @state = :unknown
                 if text
                     @state = :node
+                end
+            end
+
+            def __apply__(&blk)
+                tm_assert{ blk }
+                instance_eval &blk
+                self
+            end
+
+            def != (value)
+                !(self == value)
+            end
+
+            def to_s
+                "#{@tag}:#{@text}[#{@children.map{ |c| c.to_s }.join('|')}]"
+            end
+
+            def == (value)
+                (value.is_a? TreeNode) && [ :@tag, :@attrs, :@text, :@children, :@state ].all? do |sym|
+                    instance_variable_get(sym) == value.instance_variable_get(sym)
                 end
             end
 

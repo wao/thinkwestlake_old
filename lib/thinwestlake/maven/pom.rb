@@ -7,24 +7,31 @@ require 'thinwestlake/maven/treenode'
 
 module ThinWestLake
     module Maven
+        # Repesent a xml block with tag. 
         class PomBlock
             include AttrRw
 
+            # Parse a "gid:aid" string to a two element array contains [gid, aid]
+            #
+            # @param mid [String] id string like "gid:aid"
+            # @return [Array] of 2 elements [gid,aid]
             def parse_id(mid)
-                tm_assert{ mid.instance_of? String }
+                tm_assert{ mid.is_a? String }
                 ids = mid.split ':'
                 tm_assert{ ids.length == 2 }
                 ids.map { |id| id.to_sym }
             end
 
-            attr_rw :tag, :xml_attrs
+            attr_rw :tag, :xml_attrs, :configuration
 
             def initialize( tag, xml_attrs = {} )
+                tm_assert{ tag.is_a? Symbol }
                 @tag = tag
                 @xml_attrs = xml_attrs
                 @configure = TreeNode.new( @tag )
             end
 
+            # Allow user using code block to construct inner xml structure
             def config( &blk )
                 if blk
                     @configure.instance_eval &blk 
@@ -32,6 +39,7 @@ module ThinWestLake
                 @configure
             end
 
+            # Translate to a tree node representatin which can easily produce xml file.
             def to_treenode
                 tm_assert{ @tag }
                 node = TreeNode.new( @tag, nil, @xml_attrs )
@@ -40,6 +48,7 @@ module ThinWestLake
             end
         end
 
+        # A xml block specify gid, aid and version, denote an artifact of pom
         class Artifact < PomBlock
             attr_reader :gid, :aid
 
@@ -69,13 +78,10 @@ module ThinWestLake
                 end
                 node
             end
-
-            #def children
-                #@configure.__children__
-            #end
         end
 
 
+        # A dependency of pom
         class Dependency < Artifact
             attr_rw :scope
             attr_rw :type
@@ -92,17 +98,7 @@ module ThinWestLake
             end
         end
 
-        class ArtifactRepo
-            MAP = {}
-
-            def self.add( gid, aid, &blk )
-                artifact = Artifact.new(gid, aid)
-                artifact.instance_eval &blk
-                MAP[aid] = artifact
-            end
-
-        end
-
+        # A list of artifacts
         class Artifacts < PomBlock
             def initialize( tag, cls )
                 super(tag)
@@ -110,6 +106,7 @@ module ThinWestLake
                 @artifacts = {}
             end
 
+            # Add an artifact
             def artifact( gid, aid, version=nil, options={}, &blk )
                 @artifacts[ aid ] = @cls.new( gid, aid, version,&blk )
                 if blk
@@ -130,6 +127,7 @@ module ThinWestLake
             end
         end
 
+        # A list of xml blocks which have same tag
         class PomBlocks < PomBlock
             def initialize( tag, cls )
                 super(tag)
@@ -158,6 +156,7 @@ module ThinWestLake
             end
         end
 
+        # A list of depencies
         class Dependencies < Artifacts
             def initialize
                 super( :dependencies, Dependency )
@@ -166,6 +165,7 @@ module ThinWestLake
             alias_method :dependency, :artifact
         end
 
+        # Mixin for support depencies
         module DepenciesBlock
             def dependency( id, version=nil, options={}, &blk )
                 ids = parse_id(id)
@@ -183,6 +183,7 @@ module ThinWestLake
             end
         end
 
+        # A plugin in
         class Plugin < Artifact
             include DepenciesBlock
             def initialize( gid, aid, version =nil )
@@ -206,6 +207,7 @@ module ThinWestLake
         end
 
 
+        # A list of plugin
         class Plugins < Artifacts
             def initialize
                 super( :plugins, Plugin )
@@ -214,6 +216,7 @@ module ThinWestLake
             alias_method :plugin, :artifact
         end
 
+        # Mixin to support plugins, pluginmanagement and dependency management
         module BuildBlock
             include DepenciesBlock
 
@@ -222,7 +225,6 @@ module ThinWestLake
                 @plugins = Plugins.new
                 @plugin_management = Plugins.new
                 @dependency_management = Dependencies.new
-                @modules = {}
             end
 
             def build_block_to_treenode(root_node)
@@ -250,6 +252,7 @@ module ThinWestLake
             end
         end
 
+        # Profile 
         class Profile < PomBlock
             include BuildBlock
 
@@ -263,6 +266,7 @@ module ThinWestLake
             end
         end
 
+        # Profiles
         class Profiles < PomBlocks
             def initialize
                 super( :profiles, Profile )
@@ -272,6 +276,7 @@ module ThinWestLake
         end
 
 
+        # A pom
         class Pom < Artifact
             include BuildBlock
 
