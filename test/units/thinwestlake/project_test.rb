@@ -1,4 +1,4 @@
-require_relative '../test_helper'
+require_relative '../../test_helper'
 require 'thinwestlake'
 
 class TestProject < Minitest::Test
@@ -6,26 +6,16 @@ class TestProject < Minitest::Test
         setup do
             @gid = "info.thinkmore"
             @aid = "simple"
-            ThinWestLake::project @gid, @aid
-        end
-
-        teardown do
-            ThinWestLake::reset
+            @root = ThinWestLake::project @gid, @aid
         end
 
         should "access project with root" do
-            assert_equal @gid.to_sym, ThinWestLake::root.gid
-            assert_equal @aid.to_sym, ThinWestLake::root.aid
-        end
-
-        should "raise a exception with second project definition" do
-            assert_raises ArgumentError do
-                ThinWestLake::project "a", "b"
-            end
+            assert_equal @gid.to_sym, @root.gid
+            assert_equal @aid.to_sym, @root.aid
         end
     end
 
-    context "node with a boolean option simple" do
+    context "a node with a boolean option simple" do
        setup do
            @node_class = Class.new( ThinWestLake::Node ) do
                boolean :simple
@@ -45,7 +35,7 @@ class TestProject < Minitest::Test
        end
     end
 
-    context "node with a enum option simple" do
+    context "a node with a enum option simple" do
         setup do
            @node_class = Class.new( ThinWestLake::Node ) do
                enum :simple, [ :a, :b, :c]
@@ -66,7 +56,7 @@ class TestProject < Minitest::Test
         end
     end
 
-    context "node with a node property named n1 which define a boolean simple" do
+    context "a node with a node property named n1 which define a boolean simple" do
         setup do
            @node_class = Class.new( ThinWestLake::Node ) do
                node :n1 do
@@ -86,18 +76,14 @@ class TestProject < Minitest::Test
         end
     end
 
-    context "a simple with android" do
-        teardown do
-            ThinWestLake::reset
-        end
-
+    context "a simple project with android" do
         should "export android define" do
-            ThinWestLake::project "android", "android", "1.0" do
+            root = ThinWestLake::project "android", "android", "1.0" do
                 android
             end
 
-            ThinWestLake::Project.root.configure
-            ThinWestLake::Project.root.generate(ThinWestLake::DumpFileMgr.new)
+            root.configure
+            root.generate(ThinWestLake::DumpFileMgr.new)
         end
     end
     

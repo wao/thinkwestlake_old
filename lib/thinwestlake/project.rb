@@ -123,10 +123,11 @@ module ThinWestLake
             @aid = aid.to_sym
             @version = version
             @pom = {}
+            self.class.last_instance=self
         end
 
         meta_eval do
-            attr_accessor :root
+            attr_accessor :last_instance
         end
 
         def configure( root_prj = nil )
@@ -138,6 +139,14 @@ module ThinWestLake
             @node.each_value do |v|
                 v.configure( self )
             end
+
+            #if !@subtwl.empty? 
+                #if pom( :root ).packaging.nil? || ( pom( :root ).packaging.to_sym == :pom )
+                    ##TODO add module of package
+                #else
+                    #raise "Need to add module but packaging is not pom"
+                #end
+            #end
         end
 
         def create_pom( file_mgr, pom, path = nil )
@@ -163,22 +172,15 @@ module ThinWestLake
     end
 
     def self.project( gid, aid, version=nil, &block )
-        if Project.root
-            raise ArgumentError.new("Only one project definition can exist!") 
-        end
+        #if Project.root
+            #raise ArgumentError.new("Only one project definition can exist!") 
+        #end
 
-        Project.root = Project.new( gid, aid, version )
+        root = Project.new( gid, aid, version )
         if block
-            Project.root.instance_eval &block
+            root.instance_eval &block
         end
-    end
-
-    def self.root
-        Project.root
-    end
-
-    def self.reset
-        Project.root = nil
+        root
     end
 
     def self.extension( &blk )

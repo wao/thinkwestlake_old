@@ -26,13 +26,16 @@ Main {
         end
 
         load 'TWLfile'
+
+        ThinWestLake::Project.last_instnace
     end
 
     def run
-        load_twlfile
+        root = load_twlfile
 
-        ThinWestLake::Project.root.configure
-        ThinWestLake::Project.root.generate( filemgr )
+
+        root.configure
+        root.generate( filemgr )
     end
 
     mode "generate" do
@@ -52,13 +55,13 @@ Main {
             def run
                 class_name = params[:class_name].value
                 if class_name.chr[0] == "." 
-                    load_twlfile
-                    if ThinWestLake::Project.root.java_package.nil?
+                    root = load_twlfile
+                    if root.java_package.nil?
                         puts "Not specify package name in TWLfile"
                         exit
                     end
                     
-                    class_name = ThinWestLake::Project.root.java_package + class_name
+                    class_name = root.java_package + class_name
                 end
 
                 package_names = class_name.split( "." )
