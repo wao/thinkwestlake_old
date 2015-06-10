@@ -1,5 +1,6 @@
 require 'simple_assert'
 require 'byebug'
+require 'set'
 
 module ThinWestLake
     module Maven
@@ -12,7 +13,7 @@ module ThinWestLake
                     warn_level = $VERBOSE
                     $VERBOSE = nil
                     if instance_methods.include?(name.to_sym) &&
-                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|class|inspect|instance_variable_set|object_id|instance_variable_get|to_s|method|instance_of\?|respond_to\?|to_ary$)/
+                        name !~ /^(__|instance_eval|tm_assert|equal\?|nil\?|!|is_a\?|byebug|throw|class|inspect|instance_variable_set|object_id|instance_variable_get|to_s|method|instance_of\?|respond_to\?|to_ary|hash|eql\?$)/
                         @hidden_methods ||= {}
                         @hidden_methods[name.to_sym] = instance_method(name)
                         undef_method name
@@ -117,12 +118,55 @@ module ThinWestLake
             end
 
             def to_s
-                "#{@tag}:#{@text}[#{@children.map{ |c| c.to_s }.join('|')}]"
+                "#{@tag}:#{@state}:#{@text}[#{@children.map{ |c| c.to_s }.join('|')}]"
             end
 
+            
+            def to_str
+                to_s
+            end
+
+            def inspect
+                "[#{self.class}]#{object_id}:#{to_s}"
+            end
+
+            #def hash
+                #ret = @tag.hash ^ @text.hash
+                #if @attrs.nil?
+                    #ret = ret ^ @attrs.hash
+                #else
+                    #@attrs.each_pair do |n,v|
+                        #ret = ret ^ n.hash ^ v.hash
+                    #end
+                #end
+
+                #@children.each do |c|
+                    #ret = ret ^ c.hash
+                #end
+
+                #ret
+            #end
+
+
             def == (value)
-                (value.is_a? TreeNode) && [ :@tag, :@attrs, :@text, :@children, :@state ].all? do |sym|
-                    instance_variable_get(sym) == value.instance_variable_get(sym)
+                if value.is_a? TreeNode
+                    ret = [ :@tag, :@attrs, :@text ].all? do |sym|
+                        instance_variable_get(sym) == value.instance_variable_get(sym)
+                    end
+                    if ret
+                        children = value.instance_variable_get(:@children)
+                        if children.size == @children.size
+                            children.all? do |c|
+                                @children.include? c
+                            end
+                        else
+                            false
+                        end
+                    else
+                        false
+                    end
+                else
+                    false
                 end
             end
 

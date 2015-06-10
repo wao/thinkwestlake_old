@@ -22,7 +22,7 @@ module ThinWestLake
                 ids.map { |id| id.to_sym }
             end
 
-            attr_rw :tag, :xml_attrs, :configuration
+            attr_rw :tag, :xml_attrs, :configure
 
             def initialize( tag, xml_attrs = {} )
                 tm_assert{ tag.is_a? Symbol }
@@ -289,6 +289,7 @@ module ThinWestLake
                 super( :project, gid, aid, version, POM_DECL )
                 build_block_init
                 @profiles = Profiles.new
+                @modules = {}
 
                 if blk
                     instance_eval &blk

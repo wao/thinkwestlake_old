@@ -1,6 +1,7 @@
 require_relative "../../../test_helper"
 
 require 'thinwestlake/maven/pom'
+require 'rexml/document'
 
 include ThinWestLake::Maven
 
@@ -19,7 +20,7 @@ class TestMavenPom < Minitest::Test
                 sub "a"
             end
 
-            assert_equal "a", @pomblock.configuration.sub.__text__
+            assert_equal "a", @pomblock.configure.sub.__text__
         end
 
         should "can translate to node which config works as children" do
@@ -27,16 +28,14 @@ class TestMavenPom < Minitest::Test
                 sub "a"
             end
 
-            assert_equal @pomblock.to_treenode, TreeNode.new( :start ) do
-                sub "a"
-            end
+            node = TreeNode.new( :start ).__apply__(){ sub "a" }
+            assert_equal @pomblock.to_treenode, node
         end
     end
 
 
-
-    context "a article" do
-        should "add tag, gid and aid" do
+    context "an artifact" do
+        should "support tag, gid and aid" do
             at = Artifact.new( :r, :gid, :aid )
             at.config.execution
 
@@ -44,24 +43,108 @@ class TestMavenPom < Minitest::Test
             assert_equal :gid, at.gid
             assert_equal :aid, at.aid
             assert_equal :execution, at.config.__children__[0].__tag__
+
+            assert_equal at.to_treenode, (TreeNode.new( :r ).__apply__() do
+                groupId :gid
+                artifactId :aid
+                execution
+            end)
+        end
+
+        should "support version if nesseary" do
+            at = Artifact.new( :r, :gid, :aid )
+            at.version( "1.0" )
+
+            assert_equal at.to_treenode, (TreeNode.new( :r ).__apply__() do
+                groupId :gid
+                artifactId :aid
+                version "1.0"
+            end)
+            
         end
     end
 
-    context "pom object" do
+    context "a pom simple object" do
         setup do
-            @pom = ThinWestLake::Maven::Pom.new( "info.thinkmore", "testpkg", "1.0.0" )
+            @pom = Pom.new( "info.thinkmore", "testpkg", "1.0.0" )
         end
 
-        should "write xml" do
-            puts @pom.to_xml.target!
+        should "write xml with gid aid and version" do
+            doc = XmlDoc.new(@pom)
+            assert doc.elem( "/project/groupId" )
+            assert_equal "info.thinkmore", doc.text( "/project/groupId" )
+            assert_equal "testpkg", doc.text( "/project/artifactId" )
+            assert_equal "1.0.0", doc.text( "/project/version" )
+            assert_equal "4.0.0", doc.text( "/project/modelVersion" )
         end
 
         should "can define plugins" do
             @pom.plugin( "gid:aid" ) do
-                version = 100 
+                version( 100 )
             end
 
-            puts @pom.to_xml.target!
+            doc = XmlDoc.new(@pom)
+
+            assert_equal "gid", doc.text( "/project/build/plugins/plugin/groupId" )
+            assert_equal "aid", doc.text( "/project/build/plugins/plugin/artifactId" )
+            assert_equal "100", doc.text( "/project/build/plugins/plugin/version" )
+
+            @pom.plugin( "gid1:aid1" ) 
+
+            plugins = { "gid"=>"aid", "gid1"=>"aid1" }
+
+            doc.elem( "/project/build/plugins/plugin" ) do |t|
+                assert plugins.has_key? t.text( "groupId" )
+                assert_equal plugins[ t.text("groupId") ], t.text( "artifactId" )
+                plugins.delete t.text("groupId" )
+            end
+        end
+
+        should "can define plugin management" do
+            @pom.plugin_mgr( "gid:aid" ) do
+                version( 100 )
+            end
+
+            doc = XmlDoc.new(@pom)
+
+            assert_equal "gid", doc.text( "/project/build/pluginManagement/plugins/plugin/groupId" )
+            assert_equal "aid", doc.text( "/project/build/pluginManagement/plugins/plugin/artifactId" )
+            assert_equal "100", doc.text( "/project/build/pluginManagement/plugins/plugin/version" )
+
+            @pom.plugin_mgr( "gid1:aid1" ) 
+
+            plugins = { "gid"=>"aid", "gid1"=>"aid1" }
+
+            doc.elem( "/project/build/pluginManagement/plugins/plugin" ) do |t|
+                assert plugins.has_key? t.text( "groupId" )
+                assert_equal plugins[ t.text("groupId") ], t.text( "artifactId" )
+                plugins.delete t.text("groupId" )
+            end
+        end
+
+
+        should " can define dependency" do
+            @pom.dependency( "depg1:depa1" ) do
+                version( "2.0" )
+            end
+
+            doc = XmlDoc.new(@pom)
+
+            assert_equal "depg1", doc.text( "/project/dependencies/dependency/groupId" )
+            assert_equal "depa1", doc.text( "/project/dependencies/dependency/artifactId" )
+            assert_equal "2.0", doc.text( "/project/dependencies/dependency/version" )
+        end
+
+        should " can define dependency management" do
+            @pom.dependency_mgr( "depg1:depa1" ) do
+                version( "2.0" )
+            end
+
+            doc = XmlDoc.new(@pom)
+
+            assert_equal "depg1", doc.text( "/project/dependencyManagement/dependencies/dependency/groupId" )
+            assert_equal "depa1", doc.text( "/project/dependencyManagement/dependencies/dependency/artifactId" )
+            assert_equal "2.0", doc.text( "/project/dependencyManagement/dependencies/dependency/version" )
         end
     end
 end
