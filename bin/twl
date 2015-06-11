@@ -19,15 +19,25 @@ Main {
         end
     end
 
-    def load_twlfile
-        if !File.exist? "TWLfile"
-            puts "Can't find TWLfile"
-            exit -1
+    def find_twlfile( path )
+        file = path + "TWLfile"
+        if file.exist?
+            file
+        else
+            if path.root?
+                puts "Can't find TWLfile"
+                exit -1
+            else
+                find_twlfile path.parent
+            end
         end
+    end
 
-        load 'TWLfile'
-
-        ThinWestLake::Project.last_instnace
+    def load_twlfile
+        file = find_twlfile( Pathname.getwd )
+        load file.to_s
+        ThinWestLake::Project.last_instance.path file.parent
+        ThinWestLake::Project.last_instance
     end
 
     def run

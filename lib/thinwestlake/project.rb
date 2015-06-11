@@ -97,7 +97,7 @@ module ThinWestLake
     end
 
     class Project < Node
-        attr_rw :gid, :aid, :version, :java_package
+        attr_rw :gid, :aid, :version, :java_package, :path
 
         def pom( name = nil, value = nil )
             if name.nil?
@@ -124,6 +124,7 @@ module ThinWestLake
             @version = version
             @pom = {}
             self.class.last_instance=self
+            @path = Pathname.getwd
         end
 
         meta_eval do
@@ -164,9 +165,9 @@ module ThinWestLake
 
         def generate(file_mgr=nil)
             file_mgr ||= SimpleFileMgr.new
-            create_pom( file_mgr, pom(:root) )
+            create_pom( file_mgr, pom(:root), @path )
             pom(:root).mymodules.each_pair do |p,v|
-                create_pom( file_mgr, v, p )
+                create_pom( file_mgr, v, @path + p )
             end
         end
     end

@@ -76,8 +76,8 @@ class TestProject < Minitest::Test
         end
     end
 
-    context "a simple project with android" do
-        should "export android define" do
+    context "project with extensions" do
+        should "support android" do
             root = ThinWestLake::project "android", "android", "1.0" do
                 android
             end
@@ -87,4 +87,40 @@ class TestProject < Minitest::Test
         end
     end
     
+    context "a project" do
+        should "support generate file in path" do
+            root = ThinWestLake::project "android", "android", "1.0"
+            filepath = "/testproject/fakedir"
+            root.path( Pathname.new( filepath ) )
+
+            filemgr = MiniTest::Mock.new
+            filemgr.expect( :mkdir, nil, [filepath] )
+            filemgr.expect( :write_file, nil, [filepath + "/pom.xml"] )
+
+            root.configure
+            root.generate(filemgr)
+        end
+
+        should "support generate module file in path" do
+            root = ThinWestLake::project "android", "android", "1.0"
+            filepath = "/testproject/fakedir"
+            root.path( Pathname.new( filepath ) )
+
+
+            root.configure
+
+            root.pom(:root).mymodule( "m1", ThinWestLake::Maven::Pom.new( :m1, :m1, "1.0" ) )
+            root.pom(:root).mymodule( "m2", ThinWestLake::Maven::Pom.new( :m2, :m2, "1.0" ) )
+
+            filemgr = MiniTest::Mock.new
+            filemgr.expect( :mkdir, nil, [filepath] )
+            filemgr.expect( :write_file, nil, [filepath + "/pom.xml"] )
+            filemgr.expect( :mkdir, nil, [filepath + "/m1" ] )
+            filemgr.expect( :write_file, nil, [filepath + "/m1/pom.xml"] )
+            filemgr.expect( :mkdir, nil, [filepath + "/m2" ] )
+            filemgr.expect( :write_file, nil, [filepath + "/m2/pom.xml"] )
+
+            root.generate(filemgr)
+        end
+    end
 end
