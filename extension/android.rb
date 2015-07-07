@@ -50,7 +50,7 @@ ThinWestLake.extension do
                 end
 
                 plugin_mgr "com.simpligility.maven.plugins:android-maven-plugin" do
-                    version "4.1.1"
+                    version "4.3.0"
                     config do
                         extensions "true"
                         configuration do
@@ -60,7 +60,20 @@ ThinWestLake.extension do
 
                             resourceDirectory "res"
                             androidManifestFile "AndroidManifest.xml"
+
+                            proguard do
+                                skip false
+                                jvmArgument.as_list do
+                                    jvmArgument "-Xms256m"
+                                    jvmArgument "-Xmx512m"
+                                end
+                            end
+
                         end
+                    end
+
+                    dependency "net.sf.proguard:proguard-base" do
+                        version "4.8"
                     end
                 end
 
@@ -73,14 +86,30 @@ ThinWestLake.extension do
                     end
                 end
 
+                #plugin_mgr "info.thinkmore:cofoja-maven-plugin" do
+                    #version "1.0-SNAPSHOT"
+
+                    #config do
+                        #executions do
+                            #execution do
+                                #id "default-cli"
+                                #phase "compile"
+                                #goals do
+                                    #goal "run"
+                                #end
+                            #end
+                        #end
+                    #end
+                #end
+
                 dependency_mgr "info.thinkmore.android:cofoja-api" do
                     version "1.2-SNAPSHOT"
                 end
 
-                dependency_mgr "info.thinkmore.android:cofoja" do
-                    version "1.2-SNAPSHOT"
-                    scope :provided
-                end
+                #dependency_mgr "info.thinkmore.android:cofoja" do
+                    #version "1.2-SNAPSHOT"
+                    #scope :provided
+                #end
 
                 plugin_mgr "org.eclipse.m2e:lifecycle-mapping" do
                     version "1.0.0"
@@ -115,6 +144,9 @@ ThinWestLake.extension do
                 packaging :apk
                 name "#{aid} - Integration tests"
 
+                dependency "com.google.code.findbugs:jsr305"
+                dependency "org.androidannotations:androidannotations-api"
+
                 dependency "com.google.android:android-test" do
                     version "4.1.1.4"
                     scope :provided
@@ -127,25 +159,23 @@ ThinWestLake.extension do
                 #My using pom directory
                 dependency "#{old_root.gid}:#{old_root.aid}" do
                     version old_root.version
-                    type :apk
-                    scope  :provided
+                    type "apk"
                 end
 
                 dependency "#{old_root.gid}:#{old_root.aid}" do
                     version old_root.version
-                    type :jar
                     scope  :provided
+                    type "jar"
                 end
 
-                plugin "com.simpligility.maven.plugins:android-maven-plugin" 
-                #do
-                #configuration do
-                ##TODO fix it
-                ##test do
-                ##createReport true
-                ##end
-                #end
-                #end
+                plugin "com.simpligility.maven.plugins:android-maven-plugin" do
+                    configuration do
+                        #TODO fix it
+                        mytest do
+                            createReport true
+                        end
+                    end
+                end
             end
 
             old_root.instance_exec do
@@ -155,30 +185,34 @@ ThinWestLake.extension do
                 name "#{aid}"
 
                 dependency "info.thinkmore.android:cofoja-api"
-                dependency "info.thinkmore.android:cofoja"
+                #dependency "info.thinkmore.android:cofoja"
                 dependency "com.google.guava:guava"
                 dependency "android:android"
                 dependency "org.androidannotations:androidannotations"
+                dependency "org.androidannotations:androidannotations-api"
                 dependency "com.google.android:support-v4" 
                 dependency "org.robolectric:robolectric"
                 dependency "junit:junit"
                 dependency "com.google.code.findbugs:jsr305"
 
-                plugin "com.simpligility.maven.plugins:android-maven-plugin" do
-                    configuration do
-                        proguard do
-                            skip false
-                            jvmArgument.as_list do
-                                jvmArgument "-Xms256m"
-                                jvmArgument "-Xmx512m"
-                            end
-                        end
-                    end
+                #plugin "info.thinkmore:cofoja-maven-plugin"
 
-                    dependency "net.sf.proguard:proguard-base" do
-                        version "4.8"
-                    end
-                end
+                plugin "com.simpligility.maven.plugins:android-maven-plugin" 
+                #do
+                    #configuration do
+                        #proguard do
+                            #skip false
+                            #jvmArgument.as_list do
+                                #jvmArgument "-Xms256m"
+                                #jvmArgument "-Xmx512m"
+                            #end
+                        #end
+                    #end
+
+                    #dependency "net.sf.proguard:proguard-base" do
+                        #version "4.8"
+                    #end
+                #end
 
                 plugin "org.apache.maven.plugins:maven-compiler-plugin"
 

@@ -3,6 +3,7 @@
 require 'bundler/setup'
 require 'main'
 require 'thinwestlake'
+require 'thinwestlake/loader'
 
 Main {
     option 'dryrun', 'd' do
@@ -19,33 +20,13 @@ Main {
         end
     end
 
-    def find_twlfile( path )
-        file = path + "TWLfile"
-        if file.exist?
-            file
-        else
-            if path.root?
-                puts "Can't find TWLfile"
-                exit -1
-            else
-                find_twlfile path.parent
-            end
-        end
-    end
-
-    def load_twlfile
-        file = find_twlfile( Pathname.getwd )
-        load file.to_s
-        ThinWestLake::Project.last_instance.path file.parent
-        ThinWestLake::Project.last_instance
+    def loader
+        @loader ||= ThinWestLake::Loader.new
     end
 
     def run
-        root = load_twlfile
-
-
-        root.configure
-        root.generate( filemgr )
+        loader.load_all( Pathname.getwd )
+        loader.generate_all( filemgr )
     end
 
     mode "generate" do
@@ -65,7 +46,9 @@ Main {
             def run
                 class_name = params[:class_name].value
                 if class_name.chr[0] == "." 
-                    root = load_twlfile
+                    loader.load_all( Pathname.getwd )
+                    root = loader.current
+                    FileUtils.chdir root.twlpath
                     if root.java_package.nil?
                         puts "Not specify package name in TWLfile"
                         exit

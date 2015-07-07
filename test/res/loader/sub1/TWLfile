@@ -1,0 +1,4 @@
+# vim: set ft=ruby
+ThinWestLake.project "sub1", "sub1", "1.0.0-SNAPSHOT" do
+    has_parent
+end

@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 
-require_relative "../test_helper"
+require_relative "../../test_helper"
 require 'thinwestlake/helper'
 
 class TestHelper < Minitest::Test
     context "a attr_rw helper" do
-        should "allow class to add method to read and write" do
+        should "enable class to add method to read and write" do
             classa = Class.new do
                 include ThinWestLake::AttrRw
 

@@ -37,10 +37,19 @@ class XmlElem
             end
         end
     end
+
+    def dump
+        @elem.write
+    end
 end
 
 class XmlDoc < XmlElem
     def initialize( pom )
-        super( REXML::Document.new pom.to_xml.target! )
+        #byebug
+        if pom.is_a? String
+            super( REXML::Document.new pom )
+        else
+            super( REXML::Document.new pom.to_xml.target! )
+        end
     end
 end

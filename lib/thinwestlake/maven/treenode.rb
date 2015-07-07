@@ -95,6 +95,7 @@ module ThinWestLake
             end
 
             map_name( :mymodule, "module" )
+            map_name( :mytest, "test" )
 
             def initialize(tag, text = nil, attrs={})
                 @tag = self.class.lookup_name(tag.to_sym)
@@ -168,6 +169,10 @@ module ThinWestLake
                 else
                     false
                 end
+            end
+
+            def __has_node__?(node_name)
+                !__get_node__(node_name).nil?
             end
 
             def __get_node__(node_name)

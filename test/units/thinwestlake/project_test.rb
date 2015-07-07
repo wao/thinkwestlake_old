@@ -91,7 +91,7 @@ class TestProject < Minitest::Test
         should "support generate file in path" do
             root = ThinWestLake::project "android", "android", "1.0"
             filepath = "/testproject/fakedir"
-            root.path( Pathname.new( filepath ) )
+            root.twlpath( Pathname.new( filepath ) )
 
             filemgr = MiniTest::Mock.new
             filemgr.expect( :mkdir, nil, [filepath] )
@@ -104,7 +104,7 @@ class TestProject < Minitest::Test
         should "support generate module file in path" do
             root = ThinWestLake::project "android", "android", "1.0"
             filepath = "/testproject/fakedir"
-            root.path( Pathname.new( filepath ) )
+            root.twlpath( Pathname.new( filepath ) )
 
 
             root.configure
@@ -120,6 +120,21 @@ class TestProject < Minitest::Test
             filemgr.expect( :mkdir, nil, [filepath + "/m2" ] )
             filemgr.expect( :write_file, nil, [filepath + "/m2/pom.xml"] )
 
+            root.generate(filemgr)
+        end
+
+        should "support not generate submodule files if pass nil as pom" do
+            root = ThinWestLake::project "android", "android", "1.0"
+            filepath = "/testproject/fakedir"
+            root.twlpath( Pathname.new( filepath ) )
+
+            filemgr = MiniTest::Mock.new
+            filemgr.expect( :mkdir, nil, [filepath] )
+            filemgr.expect( :write_file, nil, [filepath + "/pom.xml"] )
+
+            root.configure
+            root.pom(:root).mymodule( "m1", nil )
+            root.pom(:root).mymodule( "m2", nil )
             root.generate(filemgr)
         end
     end

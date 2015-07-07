@@ -96,8 +96,33 @@ module ThinWestLake
         end
     end
 
+    class StoreFileMgr
+        attr_reader :data
+
+        def initialize
+            @data = {}
+        end
+
+        def mkdir( path )
+        end
+
+        def write_file( filename, &blk )
+            a = ""
+            blk.call(a)
+            @data[filename.to_s] = a
+        end
+    end
+
     class Project < Node
-        attr_rw :gid, :aid, :version, :java_package, :path
+        attr_rw :gid, :aid, :version, :java_package, :twlpath
+
+        def has_parent
+            @has_parent = true
+        end
+
+        def has_parent?
+            @has_parent
+        end
 
         def pom( name = nil, value = nil )
             if name.nil?
@@ -124,7 +149,8 @@ module ThinWestLake
             @version = version
             @pom = {}
             self.class.last_instance=self
-            @path = Pathname.getwd
+            @twlpath = Pathname.getwd
+            @has_parent = false
         end
 
         meta_eval do
@@ -165,9 +191,11 @@ module ThinWestLake
 
         def generate(file_mgr=nil)
             file_mgr ||= SimpleFileMgr.new
-            create_pom( file_mgr, pom(:root), @path )
+            create_pom( file_mgr, pom(:root), @twlpath )
             pom(:root).mymodules.each_pair do |p,v|
-                create_pom( file_mgr, v, @path + p )
+                if v
+                    create_pom( file_mgr, v, @twlpath + p )
+                end
             end
         end
     end

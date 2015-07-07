@@ -1,0 +1,3 @@
+# vim: set ft=ruby
+ThinWestLake.project "parent", "parent", "1.0.0-SNAPSHOT" do
+end

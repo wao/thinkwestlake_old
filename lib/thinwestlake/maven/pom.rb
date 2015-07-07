@@ -93,7 +93,7 @@ module ThinWestLake
             def to_treenode
                 node = super
                 node.scope @scope if @scope
-                node.type @scope if @type
+                node.type @type if @type
                 node
             end
         end
@@ -108,10 +108,15 @@ module ThinWestLake
 
             # Add an artifact
             def artifact( gid, aid, version=nil, options={}, &blk )
-                @artifacts[ aid ] = @cls.new( gid, aid, version,&blk )
+                obj = @cls.new( gid, aid, version,&blk )
                 if blk
-                    @artifacts[ aid ].instance_eval &blk
+                    obj.instance_eval &blk
                 end
+                @artifacts[ gen_key(obj)] = obj
+            end
+
+            def gen_key(obj)
+                obj.aid
             end
 
             def empty?
@@ -160,6 +165,20 @@ module ThinWestLake
         class Dependencies < Artifacts
             def initialize
                 super( :dependencies, Dependency )
+            end
+
+            def gen_key(obj)
+                #byebug
+                #puts "#{obj.aid}:#{obj.type}"
+                "#{obj.aid}:#{obj.type}"
+            end
+
+            def get_obj_type(obj)
+                if obj.config.__has_node__?(:type)
+                    obj.config.type.__text__
+                else
+                    nil
+                end
             end
 
             alias_method :dependency, :artifact

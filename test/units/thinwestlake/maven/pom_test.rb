@@ -135,17 +135,50 @@ class TestMavenPom < Minitest::Test
             assert_equal "2.0", doc.text( "/project/dependencies/dependency/version" )
         end
 
+        should " treate artifact with same aid but different type as different dependencies" do
+            @pom.dependency( "depg1:depa1" ) do
+                version( "2.0" )
+            end
+
+            @pom.dependency( "depg1:depa1" ) do
+                version( "2.0" )
+                type "jar"
+            end
+
+            @pom.dependency( "depg1:depa1" ) do
+                version( "2.0" )
+                type "apk"
+            end
+
+            doc = XmlDoc.new(@pom)
+
+            count = 0
+
+            doc.elem("/project/dependencies/dependency") do |e|
+                assert_equal "depg1", e.text( "groupId" )
+                assert_equal "depa1", e.text( "artifactId" )
+                assert_equal "2.0", e.text( "version" )
+
+                count += 1 
+            end
+
+            assert 3, count
+        end
+
+
         should " support dependency management" do
             @pom.dependency_mgr( "depg1:depa1" ) do
                 version( "2.0" )
             end
 
             doc = XmlDoc.new(@pom)
+            doc.dump
 
             assert_equal "depg1", doc.text( "/project/dependencyManagement/dependencies/dependency/groupId" )
             assert_equal "depa1", doc.text( "/project/dependencyManagement/dependencies/dependency/artifactId" )
             assert_equal "2.0", doc.text( "/project/dependencyManagement/dependencies/dependency/version" )
         end
+
 
         should " support modules" do
             fpom = Pom.new( :b, :c, "1.0" )
