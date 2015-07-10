@@ -1,6 +1,7 @@
 ThinWestLake.extension do
     node :android do
         def configure( project )
+            enable_processor_plugin = true
             root = ThinWestLake::Maven::Pom.new( project.pom(:root).gid, (project.pom(:root).aid.to_s + "-parent").to_sym, project.version ) do
                 packaging "pom"
 
@@ -31,18 +32,83 @@ ThinWestLake.extension do
                     version "3.2"
                 end
 
-                dependency_mgr "com.google.android:support-v4" do
-                    version "r7"
+                if enable_processor_plugin
+                    plugin_mgr "org.codehaus.mojo:build-helper-maven-plugin" do
+                        version "1.9.1"
+                        config do
+                            execution.as_list do
+                                execution do
+                                    id "add-test-source"
+                                    phase "generate-test-sources"
+                                    goal.as_list do
+                                        goal "add-test-source"
+                                    end
+                                    configuration do
+                                        source.as_list do
+                                            source "src/main/java"
+                                            source "target/generated-sources/apt"
+                                            source "target/generated-sources/r"
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    plugin_mgr "org.bsc.maven:maven-processor-plugin" do
+                        version "2.0.5"
+                        config do
+                            execution.as_list do
+                                execution do
+                                    id "process"
+                                    goal.as_list do
+                                        goal "process"
+                                    end
+                                    phase "generate-sources"
+                                    configuration do
+                                        compilerArguments "-sourcepath target/generated-sources/r"
+                                    end
+                                end
+                                execution do
+                                    id "process-test"
+                                    goal.as_list do
+                                        goal "process-test"
+                                    end
+                                    phase "generate-test-sources"
+                                    configuration do
+                                        compilerArguments "-sourcepath target/generated-sources/r"
+                                    end
+                                end
+                            end
+                        end
+                    end
                 end
 
+
+                dependency_mgr "android.support:compatibility-v4" do
+                    version "22.0.0"
+                end
+
+                #dependency_mgr "com.google.android:support-v4" do
+                #version "19.0.1"
+                #scope "system"
+                #config do
+                #systemPath "${env.ANDROID_HOME}/extras/android/support/v4/android-support-v4.jar"
+                #end
+                #end
+
                 dependency_mgr "org.robolectric:robolectric" do
-                    version "2.4"
+                    version "3.0-rc3"
                     scope "test"
                 end
 
                 dependency_mgr "junit:junit" do
                     version "4.11"
                     scope "provided"
+                end
+
+                dependency_mgr "info.thinkmore:simple-assert" do
+                    version "1.0-SNAPSHOT"
                 end
 
                 dependency_mgr "com.google.guava:guava" do
@@ -82,24 +148,29 @@ ThinWestLake.extension do
                     configuration do
                         source "1.7"
                         target "1.7"
-                        useIncrementalCompilation "false"
+                        if enable_processor_plugin
+                            useIncrementalCompilation "true"
+                            compilerArgument "-proc:none"
+                        else
+                            useIncrementalCompilation "false"
+                        end
                     end
                 end
 
                 #plugin_mgr "info.thinkmore:cofoja-maven-plugin" do
-                    #version "1.0-SNAPSHOT"
+                #version "1.0-SNAPSHOT"
 
-                    #config do
-                        #executions do
-                            #execution do
-                                #id "default-cli"
-                                #phase "compile"
-                                #goals do
-                                    #goal "run"
-                                #end
-                            #end
-                        #end
-                    #end
+                #config do
+                #executions do
+                #execution do
+                #id "default-cli"
+                #phase "compile"
+                #goals do
+                #goal "run"
+                #end
+                #end
+                #end
+                #end
                 #end
 
                 dependency_mgr "info.thinkmore.android:cofoja-api" do
@@ -107,8 +178,8 @@ ThinWestLake.extension do
                 end
 
                 #dependency_mgr "info.thinkmore.android:cofoja" do
-                    #version "1.2-SNAPSHOT"
-                    #scope :provided
+                #version "1.2-SNAPSHOT"
+                #scope :provided
                 #end
 
                 plugin_mgr "org.eclipse.m2e:lifecycle-mapping" do
@@ -156,6 +227,9 @@ ThinWestLake.extension do
                     version "5.0.1"
                 end
 
+                dependency "android.support:compatibility-v4"
+                #dependency "com.google.android:support-v4"
+
                 #My using pom directory
                 dependency "#{old_root.gid}:#{old_root.aid}" do
                     version old_root.version
@@ -190,10 +264,16 @@ ThinWestLake.extension do
                 dependency "android:android"
                 dependency "org.androidannotations:androidannotations"
                 dependency "org.androidannotations:androidannotations-api"
-                dependency "com.google.android:support-v4" 
+                #dependency "com.google.android:support-v4" 
+                dependency "android.support:compatibility-v4"
                 dependency "org.robolectric:robolectric"
                 dependency "junit:junit"
                 dependency "com.google.code.findbugs:jsr305"
+                dependency "info.thinkmore:simple-assert"
+                if enable_processor_plugin
+                    plugin "org.codehaus.mojo:build-helper-maven-plugin" 
+                    plugin "org.bsc.maven:maven-processor-plugin"
+                end
 
                 #plugin "info.thinkmore:cofoja-maven-plugin"
 
