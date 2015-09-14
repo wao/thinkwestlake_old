@@ -96,6 +96,8 @@ module ThinWestLake
 
             map_name( :mymodule, "module" )
             map_name( :mytest, "test" )
+            map_name( :myname, "name" )
+            map_name( :myvalue, "value" )
 
             def initialize(tag, text = nil, attrs={})
                 @tag = self.class.lookup_name(tag.to_sym)
@@ -212,10 +214,14 @@ module ThinWestLake
 
             REGEXP_ALPHA_START = /^[a-z][A-Za-z0-9.]*$/
 
-            def __change_to_list__
+            def __change_to_list__(opt)
                 @state = :list
                 @subtag = @tag
-                @tag = (@tag.to_s + "s").to_sym
+                if opt[:tag]
+                    @tag = opt[:tag].to_sym
+                else
+                    @tag = (@tag.to_s + "s").to_sym
+                end
 
                 __meta_id__.class_eval "
                         def #{@subtag}(text=nil, attrs=nil,&blk)
@@ -228,10 +234,10 @@ module ThinWestLake
                         end"
             end
 
-            def as_list(selector=nil,&blk)
+            def as_list(selector=nil,opt={},&blk)
                 case @state
                 when :unknown
-                    __change_to_list__
+                    __change_to_list__(opt)
                 when :node
                     raise "Node #{@tag} already act as node, can't be treated as list"
                 end

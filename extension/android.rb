@@ -7,6 +7,8 @@ ThinWestLake.extension do
 
                 name "#{project.pom(:root).aid.to_s} - Parent"
 
+                property "android.proguard.skip", "false"
+
                 dependency "org.projectlombok:lombok" do
                     version "1.16.4"
                     scope "provided"
@@ -128,7 +130,7 @@ ThinWestLake.extension do
                             androidManifestFile "AndroidManifest.xml"
 
                             proguard do
-                                skip false
+                                skip "${android.proguard.skip}"
                                 jvmArgument.as_list do
                                     jvmArgument "-Xms256m"
                                     jvmArgument "-Xmx512m"

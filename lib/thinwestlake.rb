@@ -12,3 +12,4 @@ TWL = ThinWestLake
 require_relative '../extension/android'
 require_relative '../extension/simple'
 require_relative '../extension/barebone'
+require_relative '../extension/plain'

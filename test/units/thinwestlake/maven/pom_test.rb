@@ -162,7 +162,7 @@ class TestMavenPom < Minitest::Test
                 count += 1 
             end
 
-            assert 3, count
+            assert_equal 3, count
         end
 
 
@@ -188,6 +188,17 @@ class TestMavenPom < Minitest::Test
             doc = XmlDoc.new(@pom)
 
             assert_equal "abc", doc.text( "/project/modules/module" )
+        end
+
+        should " support properties" do
+            @pom.property( "a", "b" )
+            @pom.property( "c", "d" )
+
+            doc = XmlDoc.new(@pom)
+            doc.dump
+
+            assert_equal "b", doc.text( "/project/properties/a" ) 
+            assert_equal "d", doc.text( "/project/properties/c" ) 
         end
 
         should " support packaing" do

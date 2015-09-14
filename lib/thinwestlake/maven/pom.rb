@@ -309,6 +309,7 @@ module ThinWestLake
                 build_block_init
                 @profiles = Profiles.new
                 @modules = {}
+                @properties = {}
 
                 if blk
                     instance_eval &blk
@@ -327,6 +328,10 @@ module ThinWestLake
                 @profiles.profile( &blk )
             end
 
+            def property( prop_name, prop_value )
+                @properties[prop_name]=prop_value 
+            end
+
 
             def root
                 root_node = to_treenode
@@ -343,6 +348,15 @@ module ThinWestLake
 
                 root_node.packaging @packaging if @packaging
                 root_node.name @name if @name
+
+                if !@properties.empty?
+                    #todo my handle multiple graceful
+                    contains = root_node.properties
+
+                    @properties.each_pair do |v,k|
+                        contains.__new_node__( v.to_sym, k )
+                    end
+                end
 
                 if !@modules.empty?
                     modules = root_node.modules
